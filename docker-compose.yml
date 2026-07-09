@@ -1,0 +1,29 @@
+services:
+  proseq2:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      platforms:
+        - linux/amd64
+    image: proseq2.0:latest
+    platform: linux/amd64
+    volumes:
+      # Mount input FASTQ directory (must match -w below)
+      - ./data/input:/data/input
+      # Mount reference genome (BWA index + chromInfo)
+      - ./data/ref:/data/ref
+      # Mount output directory
+      - ./data/output:/data/output
+      # Temporary files (large sorts may need space)
+      - ./data/tmp:/data/tmp
+    working_dir: /data/input
+    # Example: override command for PRO-seq single-end
+    # command: >
+    #   proseq2.0
+    #   -SE -P
+    #   -i /data/ref/genome.bwa_index
+    #   -c /data/ref/genome.chromInfo
+    #   -I sample
+    #   -T /data/tmp
+    #   -O /data/output
+    #   --thread 4

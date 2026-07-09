@@ -221,3 +221,127 @@ Here is an examples to generate the bigWig for dREG.
 bash proseq2.0.bsh -SE -G -4DREG -i $dog_genome -c $dog_chinfo -I ./example1_R1  -T ./tmpdir -O ./outputdir
 ```
 
+## Docker
+
+This repository includes a Docker image with all bioinformatics dependencies pre-installed and **version-pinned** via bioconda.
+
+### Pinned tool versions
+
+| Tool | Version | Conda package |
+|------|---------|---------------|
+| cutadapt | 1.8.3 | cutadapt |
+| seqtk | 1.3 | seqtk |
+| prinseq-lite.pl | 0.20.4 | prinseq |
+| bwa | 0.7.17 | bwa |
+| samtools | 1.9 | samtools |
+| bedtools | 2.28.0 | bedtools |
+| sort-bed (bedops) | 2.4.41 | bedops |
+| bedGraphToBigWig | 472 | ucsc-bedgraphtobigwig |
+| bigWigToBedGraph | 469 | ucsc-bigwigtobedgraph |
+| perl | 5.32.1 | perl |
+
+See also the version table in [`Dockerfile`](Dockerfile) and the fully resolved lock in [`conda-lock.yml`](conda-lock.yml).
+
+### Build
+
+Apple Silicon Macs should build for `linux/amd64`:
+
+```bash
+docker build --platform linux/amd64 -t proseq2.0:latest .
+```
+
+### Run (PRO-seq single-end example)
+
+Mount reference genome, input FASTQ, output, and tmp directories. Set `-w` to the directory containing FASTQ files:
+
+```bash
+docker run --rm \
+  --platform linux/amd64 \
+  -v /path/to/ref:/data/ref \
+  -v /path/to/fastq:/data/input \
+  -v /path/to/output:/data/output \
+  -v /path/to/tmp:/data/tmp \
+  -w /data/input \
+  proseq2.0:latest proseq2.0 \
+  -SE -P \
+  -i /data/ref/genome.bwa_index \
+  -c /data/ref/genome.chromInfo \
+  -I sample \
+  -T /data/tmp \
+  -O /data/output \
+  --thread 4
+```
+
+Paired-end input files must be named `PREFIX_R1.fastq.gz` and `PREFIX_R2.fastq.gz`.
+
+### Merge bigWig files
+
+```bash
+docker run --rm --platform linux/amd64 \
+  -v /path/to/bw:/data/bw \
+  -v /path/to/ref:/data/ref \
+  proseq2.0:latest merge-bigwigs \
+  --chrom-info=/data/ref/genome.chromInfo \
+  /data/bw/merged.bw /data/bw/a.bw /data/bw/b.bw
+```
+
+### Verify installed versions
+
+```bash
+docker run --rm --platform linux/amd64 proseq2.0:latest verify-versions
+```
+
+### docker-compose
+
+See [`docker-compose.yml`](docker-compose.yml) for volume mount examples.
+
+### Docker Hub (pre-built image)
+
+Published image: **[`sorayone56/proseq2.0`](https://hub.docker.com/r/sorayone56/proseq2.0)**
+
+**Always pin a version tag in production / papers — do not rely on `latest`.**
+
+| Image tag | Platform | Tool pins (summary) |
+|-----------|----------|---------------------|
+| **`1.0.0`** (recommended) | linux/amd64 | cutadapt 1.8.3, samtools 1.9, bedtools 2.28.0, bwa 0.7.17, … (see [Pinned tool versions](#pinned-tool-versions)) |
+| `latest` | linux/amd64 | Same as the most recent release (currently `1.0.0`) |
+
+Pull on any machine:
+
+```bash
+docker pull sorayone56/proseq2.0:1.0.0
+docker run --rm --platform linux/amd64 sorayone56/proseq2.0:1.0.0 verify-versions
+```
+
+Use the same `docker run` examples above, replacing the image name with **`sorayone56/proseq2.0:1.0.0`**.
+
+#### Publish to Docker Hub (maintainers)
+
+1. Bump version in [`VERSION`](VERSION)
+2. Build and push:
+
+```bash
+docker login
+chmod +x docker/publish.sh
+./docker/publish.sh              # reads VERSION, pushes :VERSION and :latest
+./docker/publish.sh 1.0.1        # explicit tag
+./docker/publish.sh 1.0.1 --no-latest  # version tag only
+```
+
+#### Platform / multi-architecture note
+
+This image is built for **`linux/amd64`** to match the README-pinned bioconda versions (samtools 1.9, bedtools 2.28.0, etc.). Bioconda does not provide arm64 builds for several of these exact versions.
+
+| Platform | Support |
+|----------|---------|
+| linux/amd64 (x86_64 servers, cloud) | Native |
+| Apple Silicon (M1/M2/M3) | Pulls amd64 image; Docker (OrbStack / Docker Desktop) runs it via emulation |
+| linux/arm64 native | Not available with pinned versions |
+
+To force amd64 on ARM hosts:
+
+```bash
+docker pull --platform linux/amd64 sorayone56/proseq2.0:1.0.0
+docker run --rm --platform linux/amd64 sorayone56/proseq2.0:1.0.0 verify-versions
+```
+

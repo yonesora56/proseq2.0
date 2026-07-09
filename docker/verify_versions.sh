@@ -2,8 +2,24 @@
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-# shellcheck source=expected_versions.env
-source "${SCRIPT_DIR}/expected_versions.env"
+
+arch="$(uname -m)"
+case "${arch}" in
+  x86_64|amd64)
+    # shellcheck source=expected_versions-amd64.env
+    source "${SCRIPT_DIR}/expected_versions-amd64.env"
+    platform_label="linux/amd64"
+    ;;
+  aarch64|arm64)
+    # shellcheck source=expected_versions-arm64.env
+    source "${SCRIPT_DIR}/expected_versions-arm64.env"
+    platform_label="linux/arm64"
+    ;;
+  *)
+    echo "ERROR: unsupported architecture: ${arch}" >&2
+    exit 1
+    ;;
+esac
 
 fail=0
 
@@ -29,7 +45,7 @@ check_contains() {
   fi
 }
 
-echo "=== proseq2.0 dependency version check ==="
+echo "=== proseq2.0 dependency version check (${platform_label}) ==="
 
 for tool in cutadapt seqtk prinseq-lite.pl bwa samtools bedtools bedGraphToBigWig bigWigToBedGraph sort-bed; do
   check_cmd "${tool}"

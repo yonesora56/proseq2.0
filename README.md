@@ -225,7 +225,7 @@ bash proseq2.0.bsh -SE -G -4DREG -i $dog_genome -c $dog_chinfo -I ./example1_R1 
 
 This repository includes a Docker image with all bioinformatics dependencies pre-installed and **version-pinned** via bioconda.
 
-### Pinned tool versions
+### Pinned tool versions (linux/amd64)
 
 | Tool | Version | Conda package |
 |------|---------|---------------|
@@ -240,14 +240,37 @@ This repository includes a Docker image with all bioinformatics dependencies pre
 | bigWigToBedGraph | 469 | ucsc-bigwigtobedgraph |
 | perl | 5.32.1 | perl |
 
-See also the version table in [`Dockerfile`](Dockerfile) and the fully resolved lock in [`conda-lock.yml`](conda-lock.yml).
+### Pinned tool versions (linux/arm64)
+
+Bioconda does not ship the amd64-era pins above for arm64. The multi-arch image uses the closest available pins:
+
+| Tool | Version | Conda package |
+|------|---------|---------------|
+| cutadapt | 5.2 | cutadapt |
+| seqtk | 1.5 | seqtk |
+| prinseq-lite.pl | 0.20.4 | prinseq |
+| bwa | 0.7.19 | bwa |
+| samtools | 1.23.1 | samtools |
+| bedtools | 2.31.1 | bedtools |
+| sort-bed (bedops) | 2.4.42 | bedops |
+| bedGraphToBigWig | 482 | ucsc-bedgraphtobigwig |
+| bigWigToBedGraph | 482 | ucsc-bigwigtobedgraph |
+| perl | 5.32.1 | perl |
+
+See [`environment-amd64.yml`](environment-amd64.yml), [`environment-arm64.yml`](environment-arm64.yml), and [`Dockerfile`](Dockerfile).
 
 ### Build
 
-Apple Silicon Macs should build for `linux/amd64`:
+Multi-arch (amd64 + arm64) via buildx:
 
 ```bash
-docker build --platform linux/amd64 -t proseq2.0:latest .
+docker buildx build --platform linux/amd64,linux/arm64 -t proseq2.0:1.1.0 .
+```
+
+Single platform:
+
+```bash
+docker build --platform linux/amd64 -t proseq2.0:1.1.0 .
 ```
 
 ### Run (PRO-seq single-end example)
@@ -301,19 +324,27 @@ Published image: **[`sorayone56/proseq2.0`](https://hub.docker.com/r/sorayone56/
 
 **Always pin a version tag in production / papers — do not rely on `latest`.**
 
-| Image tag | Platform | Tool pins (summary) |
-|-----------|----------|---------------------|
-| **`1.0.0`** (recommended) | linux/amd64 | cutadapt 1.8.3, samtools 1.9, bedtools 2.28.0, bwa 0.7.17, … (see [Pinned tool versions](#pinned-tool-versions)) |
-| `latest` | linux/amd64 | Same as the most recent release (currently `1.0.0`) |
+| Image tag | Architectures | Notes |
+|-----------|---------------|-------|
+| **`1.1.0`** (recommended) | linux/amd64, linux/arm64 | Multi-arch; tool pins differ by CPU (see tables above) |
+| `1.0.0` | linux/amd64 only | Legacy single-arch release |
+| `latest` | multi-arch | Points to the most recent release |
 
-Pull on any machine:
+Pull (Docker selects the native architecture automatically):
 
 ```bash
-docker pull sorayone56/proseq2.0:1.0.0
-docker run --rm --platform linux/amd64 sorayone56/proseq2.0:1.0.0 verify-versions
+docker pull sorayone56/proseq2.0:1.1.0
+docker run --rm sorayone56/proseq2.0:1.1.0 verify-versions
 ```
 
-Use the same `docker run` examples above, replacing the image name with **`sorayone56/proseq2.0:1.0.0`**.
+Use **`sorayone56/proseq2.0:1.1.0`** in the run examples below.
+
+For strict reproducibility matching the original Danko Lab README pins, use **linux/amd64** explicitly:
+
+```bash
+docker pull --platform linux/amd64 sorayone56/proseq2.0:1.1.0
+docker run --rm --platform linux/amd64 sorayone56/proseq2.0:1.1.0 verify-versions
+```
 
 #### Publish to Docker Hub (maintainers)
 
@@ -328,20 +359,17 @@ chmod +x docker/publish.sh
 ./docker/publish.sh 1.0.1 --no-latest  # version tag only
 ```
 
-#### Platform / multi-architecture note
+#### Platform / multi-architecture
 
-This image is built for **`linux/amd64`** to match the README-pinned bioconda versions (samtools 1.9, bedtools 2.28.0, etc.). Bioconda does not provide arm64 builds for several of these exact versions.
+| Platform | Image | Tool versions |
+|----------|-------|---------------|
+| linux/amd64 | Native in multi-arch manifest | README-original pins (samtools 1.9, bedtools 2.28.0, …) |
+| linux/arm64 | Native in multi-arch manifest | Newer bioconda pins (samtools 1.23.1, bedtools 2.31.1, …) |
+| Apple Silicon Mac | Pulls `linux/arm64` variant natively | arm64 pins |
 
-| Platform | Support |
-|----------|---------|
-| linux/amd64 (x86_64 servers, cloud) | Native |
-| Apple Silicon (M1/M2/M3) | Pulls amd64 image; Docker (OrbStack / Docker Desktop) runs it via emulation |
-| linux/arm64 native | Not available with pinned versions |
-
-To force amd64 on ARM hosts:
+Check which variant is running:
 
 ```bash
-docker pull --platform linux/amd64 sorayone56/proseq2.0:1.0.0
-docker run --rm --platform linux/amd64 sorayone56/proseq2.0:1.0.0 verify-versions
+docker run --rm sorayone56/proseq2.0:1.1.0 verify-versions
 ```
 

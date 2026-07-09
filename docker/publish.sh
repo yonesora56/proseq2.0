@@ -13,7 +13,7 @@ set -euo pipefail
 
 IMAGE="${DOCKERHUB_IMAGE:-sorayone56/proseq2.0}"
 BUILDER="${BUILDX_BUILDER:-multiarch-builder}"
-PLATFORM="${DOCKER_PLATFORMS:-linux/amd64}"
+PLATFORM="${DOCKER_PLATFORMS:-linux/amd64,linux/arm64}"
 PUSH_LATEST=1
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -47,8 +47,8 @@ echo "Building and pushing ${IMAGE}:${TAG} for ${PLATFORM} ..."
 docker buildx build \
   --platform "${PLATFORM}" \
   "${TAGS[@]}" \
+  --build-arg "IMAGE_VERSION=${TAG}" \
   --push \
-  --label "org.opencontainers.image.version=${TAG}" \
   .
 
 echo ""
@@ -60,4 +60,4 @@ fi
 echo ""
 echo "Pull on another machine (recommended: pin the version tag):"
 echo "  docker pull ${IMAGE}:${TAG}"
-echo "  docker run --rm --platform linux/amd64 ${IMAGE}:${TAG} verify-versions"
+echo "  docker run --rm ${IMAGE}:${TAG} verify-versions"

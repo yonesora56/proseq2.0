@@ -1,0 +1,18 @@
+name: proseq2
+channels:
+  - bioconda
+  - conda-forge
+channel_priority: strict
+platforms:
+  - linux-aarch64
+dependencies:
+  - cutadapt=5.2
+  - seqtk=1.5
+  - prinseq=0.20.4
+  - bwa=0.7.19
+  - samtools=1.23.1
+  - bedtools=2.31.1
+  - bedops=2.4.42
+  - ucsc-bedgraphtobigwig=482
+  - ucsc-bigwigtobedgraph=482
+  - perl=5.32.1
